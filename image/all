@@ -1,0 +1,95 @@
+# image funcs
+
+fn cnt_image_newid() {
+	IFS = ()
+
+	id <= (
+		head -c32 /dev/urandom |
+		xxd -c 32
+			-plain
+			 |
+		tr -d "\n"
+	)
+
+	return $id
+}
+
+fn cnt_image_getid(obj) {
+	IFS = ()
+
+	id <= echo $obj | jq -r ".id" | tr -d "\n"
+
+	return $id
+}
+
+fn cnt_image_setid(obj, id) {
+	IFS = ()
+
+	obj <= echo $obj | jq ".id = \""+$id+"\""
+
+	return $obj
+}
+
+fn cnt_image_new() {
+	IFS  = ()
+	obj  = "{}"
+
+	id   <= cnt_image_newid()
+
+	path = $CNTPATH+"/images/tmp/"+$id
+
+	mkdir -p $path
+
+	obj <= cnt_image_setid($obj, $id)
+
+	return $obj
+}
+
+fn cnt_image_path(obj) {
+	IFS = ()
+
+	id <= echo $obj | jq -r ".id" | tr -d "\n"
+
+	path = $CNTPATH+"/images/tmp/"+$id
+
+	return $path
+}
+
+fn cnt_image_commit(obj) {
+
+}
+
+fn cnt_image_build(obj, buildfn) {
+	curdir <= pwd()
+	path   <= cnt_image_path($obj)
+	err    <= $buildfn($obj, $path)
+
+	if $err != "0" {
+		rm -rf $path
+		printf "Failed to build image. Err status %d" $err
+		abort
+	}
+}
+
+fn cnt_image_archive(obj) {
+	id        <= cnt_image_getid($obj)
+	temp      <= cnt_image_path($obj)
+
+	layersDir = $CNTPATH+"/images/layers"
+	tarFile   = $layersDir+"/"+$id+".tar"
+
+	mkdir -p $layersDir
+
+	cnt_tar($tarFile, $temp)
+}
+
+fn cnt_image_create(buildfn) {
+	img <= cnt_image_new()
+
+	cnt_image_build($img, $buildfn)
+	cnt_image_archive($img)
+
+	id <= cnt_image_getid($img)
+
+	return $id
+}

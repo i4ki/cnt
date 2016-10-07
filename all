@@ -1,0 +1,7 @@
+# Nash containers
+
+CNTPATH = $HOME+"/.cnt"
+
+import nashlib/all
+import archive/all
+import image/all
